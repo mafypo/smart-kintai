@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="スマート勤怠" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
+  <link rel="apple-touch-icon" href="./icon.png" />
+  <link rel="icon" type="image/png" href="./icon.png" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>スマート勤怠＆工数</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      color: #0f172a;
+    }
+    @media (prefers-color-scheme: dark) {
+      html:not(.light), html:not(.light) body {
+        background-color: #020617;
+        color: #f1f5f9;
+      }
+    }
+    html.dark, html.dark body {
+      background-color: #020617 !important;
+      color: #f1f5f9 !important;
+    }
+    html.light, html.light body {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    (function initTheme() {
+      const saved = localStorage.getItem('kintai-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = saved ? saved === 'dark' : prefersDark;
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.classList.toggle('light', !isDark);
+    })();
+  </script>
+</head>
+<body class="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-10 antialiased selection:bg-blue-600 selection:text-white transition-colors duration-200" style="padding-top: env(safe-area-inset-top);">
+  <div class="max-w-md mx-auto px-4 pt-3 space-y-4">
+    <!-- Header -->
+    <header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div class="flex items-center gap-2.5">
+        <img src="./icon.png" alt="icon" class="w-9 h-9 rounded-xl shadow-md object-cover" />
+        <div>
+          <h1 class="text-base font-bold leading-tight">スマート勤怠＆工数</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">1タップ打刻・工数トラッカー</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <input
+          id="month-picker"
+          type="month"
+          onchange="loadMonth()"
+          class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-slate-800 dark:text-slate-200"
+        />
+        <button
+          type="button"
+          onclick="toggleTheme()"
+          title="ライト/ダーク切替"
+          class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs"
+        >
+          🌓
+        </button>
+        <button
+          type="button"
+          onclick="toggleSettings()"
+          title="接続設定"
+          class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs"
+        >
+          ⚙
+        </button>
+      </div>
+    </header>
+
+    <!-- Connection Settings Panel (Stored only in localStorage on this device) -->
+    <section id="settings-panel" class="hidden bg-slate-50 dark:bg-slate-900 border border-blue-500/40 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-blue-600 dark:text-blue-400">🔐 接続設定（この端末にのみ保存）</span>
+        <button type="button" onclick="toggleSettings(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕ 閉じる</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <label class="block space-y-1">
+          <span class="text-slate-600 dark:text-slate-300">GAS ウェブアプリ URL</span>
+          <input
+            id="cfg-url"
+            type="url"
+            placeholder="https://script.google.com/macros/s/.../exec"
+            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+          />
+        </label>
+        <label class="block space-y-1">
+          <span class="text-slate-600 dark:text-slate-300">合言葉（Code.gs の API_SECRET）</span>
+          <input
+            id="cfg-secret"
+            type="password"
+            placeholder="例: kintai-2026-pass"
+            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+          />
+        </label>
+        <div class="flex gap-2 pt-1">
+          <button
+            type="button"
+            onclick="saveAndConnect()"
+            class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-xs transition"
+          >
+            保存して接続テスト
+          </button>
+          <button
+            type="button"
+            onclick="clearConfig()"
+            class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-500 text-xs"
+          >
+            リセット
+          </button>
+        </div>
+        <div id="cfg-msg" class="text-xs hidden"></div>
+      </div>
+    </section>
+
+    <!-- 1-Tap Quick Recorder -->
+    <section class="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-semibold text-blue-600 dark:text-blue-400">⚡ 1タップ打刻（上書き自動判定）</span>
+        <input
+          id="target-date"
+          type="date"
+          class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-slate-800 dark:text-slate-200"
+        />
+      </div>
+
+      <!-- STEP 1: 開始シフト（固定・1タップ） -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-700 dark:text-slate-300 font-medium">① 開始シフト</span>
+          <span id="selected-shift-info" class="font-mono text-slate-500 dark:text-slate-400">8:45〜定時 17:30</span>
+        </div>
+        <div class="grid grid-cols-6 gap-1 text-xs font-mono">
+          <button type="button" onclick="selectShift('7:50')" id="sh-7:50" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">7:50</span>
+            <span class="text-[10px] opacity-75">朝当番</span>
+          </button>
+          <button type="button" onclick="selectShift('8:45')" id="sh-8:45" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">8:45</span>
+            <span class="text-[10px] opacity-90">基本</span>
+          </button>
+          <button type="button" onclick="selectShift('10:00')" id="sh-10:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">10:00</span>
+            <span class="text-[10px] opacity-75">10時</span>
+          </button>
+          <button type="button" onclick="selectShift('11:00')" id="sh-11:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">11:00</span>
+            <span class="text-[10px] opacity-75">11時</span>
+          </button>
+          <button type="button" onclick="selectShift('13:00')" id="sh-13:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">13:00</span>
+            <span class="text-[10px] opacity-75">13時</span>
+          </button>
+          <button type="button" onclick="selectShift('有休')" id="sh-有休" class="py-2 rounded-lg border transition flex flex-col items-center">
+            <span class="font-bold">有休</span>
+            <span class="text-[10px] opacity-75">休暇</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: 退勤時刻（1タップ ＋ 手入力） -->
+      <div id="end-time-section" class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-700 dark:text-slate-300 font-medium">② 退勤時刻（1タップ / 手入力）</span>
+          <span id="calc-preview" class="font-mono text-blue-600 dark:text-blue-400 font-semibold">実働 7.7h / 残業 +0.0h</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5 text-xs font-mono">
+          <button type="button" onclick="setEndPreset(0)" id="ep-0" class="py-1.5 px-1 rounded-lg border font-bold transition">
+            定時 1730
+          </button>
+          <button type="button" onclick="setEndPreset(30)" id="ep-30" class="py-1.5 px-1 rounded-lg border transition">
+            +30m 1800
+          </button>
+          <button type="button" onclick="setEndPreset(60)" id="ep-60" class="py-1.5 px-1 rounded-lg border transition">
+            +1h 1830
+          </button>
+          <button type="button" onclick="setNowTime()" id="ep-now" class="py-1.5 px-1 rounded-lg border transition">
+            ⌚ いま
+          </button>
+        </div>
+      </div>
+
+      <!-- Submit Row -->
+      <div class="flex gap-2 pt-0.5">
+        <div class="relative flex-1">
+          <input
+            id="end-input"
+            type="tel"
+            maxlength="4"
+            value="1730"
+            oninput="onManualEndInput()"
+            placeholder="退勤4桁 (例: 1845)"
+            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+          />
+          <span class="absolute right-3 top-3 text-[11px] text-slate-400 dark:text-slate-500 font-mono">手入力可</span>
+        </div>
+        <button
+          type="button"
+          onclick="sendAttendance()"
+          id="btn-send"
+          class="bg-blue-600 hover:bg-blue-500 text-white active:scale-95 transition font-semibold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-blue-600/25 whitespace-nowrap"
+        >
+          記録する
+        </button>
+      </div>
+
+      <div id="status-msg" class="text-xs text-emerald-600 dark:text-emerald-400 hidden"></div>
+    </section>
+
+    <!-- Monthly KPI Cards -->
+    <section class="grid grid-cols-4 gap-2 text-center">
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+        <div class="text-xs text-slate-500 dark:text-slate-400">出勤</div>
+        <div id="kpi-work" class="text-base font-bold font-mono mt-0.5">-</div>
+      </div>
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+        <div class="text-xs text-slate-500 dark:text-slate-400">有休/半休</div>
+        <div id="kpi-leave" class="text-base font-bold font-mono mt-0.5">-</div>
+      </div>
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+        <div class="text-xs text-slate-500 dark:text-slate-400">時間外</div>
+        <div id="kpi-ot" class="text-base font-bold font-mono text-amber-500 dark:text-amber-400 mt-0.5">-</div>
+      </div>
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+        <div class="text-xs text-slate-500 dark:text-slate-400">合計時間</div>
+        <div id="kpi-total" class="text-base font-bold font-mono text-blue-600 dark:text-blue-400 mt-0.5">-</div>
+      </div>
+    </section>
+
+    <!-- Workload Breakdown -->
+    <section class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-semibold text-slate-700 dark:text-slate-200">📊 工数内訳（朝当番 / 横60% / 神20% / 川20%）</span>
+        <span id="workload-sum" class="font-mono text-slate-500 dark:text-slate-400">0.0h</span>
+      </div>
+      <div class="grid grid-cols-4 gap-2 text-xs">
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
+          <div class="text-slate-500 dark:text-slate-400">朝当番</div>
+          <div id="wl-morning" class="font-mono font-bold text-sm text-purple-600 dark:text-purple-400 mt-0.5">0.0h</div>
+        </div>
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
+          <div class="text-slate-500 dark:text-slate-400">横 (残差)</div>
+          <div id="wl-yoko" class="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 mt-0.5">0.0h</div>
+        </div>
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
+          <div class="text-slate-500 dark:text-slate-400">神 (20%)</div>
+          <div id="wl-kami" class="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">0.0h</div>
+        </div>
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
+          <div class="text-slate-500 dark:text-slate-400">川 (20%)</div>
+          <div id="wl-kawa" class="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400 mt-0.5">0.0h</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Daily List -->
+    <section class="space-y-2">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-xs font-semibold text-slate-500 dark:text-slate-400">日次記録リスト</h2>
+        <button type="button" onclick="loadMonth()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">再読込 ↻</button>
+      </div>
+      <div id="daily-list" class="space-y-2"></div>
+    </section>
+  </div>
+
+  <script>
+    const SHIFTS = {
+      '7:50':  { startMin: 470, regMin: 995,  regStr: '1635', regDisp: '16:35' },
+      '8:45':  { startMin: 525, regMin: 1050, regStr: '1730', regDisp: '17:30' },
+      '10:00': { startMin: 600, regMin: 1125, regStr: '1845', regDisp: '18:45' },
+      '11:00': { startMin: 660, regMin: 1185, regStr: '1945', regDisp: '19:45' },
+      '13:00': { startMin: 780, regMin: 1305, regStr: '2145', regDisp: '21:45' }
+    };
+
+    const ACTIVE_BTN_CLS = 'py-2 rounded-lg border border-blue-600 bg-blue-600 text-white transition flex flex-col items-center shadow-sm';
+    const INACTIVE_BTN_CLS = 'py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition flex flex-col items-center';
+    const ACTIVE_PRESET_CLS = 'py-1.5 px-1 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold transition shadow-sm';
+    const INACTIVE_PRESET_CLS = 'py-1.5 px-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition';
+
+    let currentShift = '8:45';
+
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('kintai-theme')) {
+          applyTheme(e.matches ? 'dark' : 'light');
+        }
+      });
+    }
+
+    function applyTheme(mode) {
+      const isDark = mode === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.classList.toggle('light', !isDark);
+    }
+
+    function toggleTheme() {
+      const isCurrentlyDark = document.documentElement.classList.contains('dark');
+      const next = isCurrentlyDark ? 'light' : 'dark';
+      localStorage.setItem('kintai-theme', next);
+      applyTheme(next);
+    }
+
+    function getConfig() {
+      return {
+        url: localStorage.getItem('kintai_gas_url') || '',
+        secret: localStorage.getItem('kintai_api_secret') || ''
+      };
+    }
+
+    function toggleSettings(forceState) {
+      const panel = document.getElementById('settings-panel');
+      const show = typeof forceState === 'boolean' ? forceState : panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !show);
+      if (show) {
+        const cfg = getConfig();
+        document.getElementById('cfg-url').value = cfg.url;
+        document.getElementById('cfg-secret').value = cfg.secret;
+      }
+    }
+
+    async function callGasApi(body) {
+      const cfg = getConfig();
+      if (!cfg.url || !cfg.secret) {
+        toggleSettings(true);
+        throw new Error('接続設定（GAS URLと合言葉）を入力してください');
+      }
+      const res = await fetch(cfg.url, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ ...body, secret: cfg.secret })
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.error || '通信エラーが発生しました');
+      }
+      return json.data;
+    }
+
+    async function saveAndConnect() {
+      const url = document.getElementById('cfg-url').value.trim();
+      const secret = document.getElementById('cfg-secret').value.trim();
+      const msgEl = document.getElementById('cfg-msg');
+      if (!url || !secret) {
+        msgEl.textContent = '⚠ URLと合言葉の両方を入力してください';
+        msgEl.className = 'text-xs text-amber-500';
+        return;
+      }
+      localStorage.setItem('kintai_gas_url', url);
+      localStorage.setItem('kintai_api_secret', secret);
+      msgEl.textContent = '接続テスト中...';
+      msgEl.className = 'text-xs text-blue-500';
+      try {
+        const ym = document.getElementById('month-picker').value;
+        const data = await callGasApi({ action: 'getDashboard', ym: ym });
+        renderDashboard(data);
+        msgEl.textContent = '✓ 接続成功！この端末に保存しました';
+        msgEl.className = 'text-xs text-emerald-500';
+        setTimeout(() => toggleSettings(false), 1000);
+      } catch (e) {
+        msgEl.textContent = '✕ ' + e.message;
+        msgEl.className = 'text-xs text-red-500';
+      }
+    }
+
+    function clearConfig() {
+      localStorage.removeItem('kintai_gas_url');
+      localStorage.removeItem('kintai_api_secret');
+      document.getElementById('cfg-url').value = '';
+      document.getElementById('cfg-secret').value = '';
+      document.getElementById('cfg-msg').textContent = 'リセットしました';
+      document.getElementById('cfg-msg').className = 'text-xs text-slate-400';
+    }
+
+    function initDates() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      document.getElementById('month-picker').value = `${yyyy}-${mm}`;
+      document.getElementById('target-date').value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    function minToHHMM(m) {
+      const hh = Math.floor(m / 60);
+      const mm = m % 60;
+      return String(hh).padStart(2, '0') + String(mm).padStart(2, '0');
+    }
+
+    function selectShift(sh) {
+      currentShift = sh;
+      ['7:50', '8:45', '10:00', '11:00', '13:00', '有休'].forEach(k => {
+        const btn = document.getElementById('sh-' + k);
+        btn.className = (k === sh) ? ACTIVE_BTN_CLS : INACTIVE_BTN_CLS;
+      });
+      const endSection = document.getElementById('end-time-section');
+      const endInput = document.getElementById('end-input');
+      if (sh === '有休') {
+        document.getElementById('selected-shift-info').textContent = '有給休暇（時刻不要）';
+        endSection.classList.add('opacity-40', 'pointer-events-none');
+        endInput.value = '';
+        endInput.disabled = true;
+        return;
+      }
+      endSection.classList.remove('opacity-40', 'pointer-events-none');
+      endInput.disabled = false;
+      const info = SHIFTS[sh];
+      document.getElementById('selected-shift-info').textContent = `${sh}〜定時 ${info.regDisp}（休憩1h込）`;
+      document.getElementById('ep-0').textContent = `定時 ${info.regStr}`;
+      document.getElementById('ep-30').textContent = `+30m ${minToHHMM(info.regMin + 30)}`;
+      document.getElementById('ep-60').textContent = `+1h ${minToHHMM(info.regMin + 60)}`;
+      setEndPreset(0);
+    }
+
+    function setEndPreset(addMin) {
+      if (currentShift === '有休') return;
+      const info = SHIFTS[currentShift];
+      document.getElementById('end-input').value = minToHHMM(info.regMin + addMin);
+      highlightPreset(addMin);
+      updateCalc();
+    }
+
+    function setNowTime() {
+      if (currentShift === '有休') return;
+      const now = new Date();
+      const str = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('end-input').value = str;
+      highlightPreset('now');
+      updateCalc();
+    }
+
+    function highlightPreset(active) {
+      [0, 30, 60, 'now'].forEach(k => {
+        const btn = document.getElementById('ep-' + k);
+        btn.className = (k === active) ? ACTIVE_PRESET_CLS : INACTIVE_PRESET_CLS;
+      });
+    }
+
+    function onManualEndInput() {
+      highlightPreset(null);
+      updateCalc();
+    }
+
+    function updateCalc() {
+      if (currentShift === '有休') return;
+      const raw = parseInt(document.getElementById('end-input').value, 10);
+      const info = SHIFTS[currentShift];
+      if (isNaN(raw) || raw < 700 || raw > 2900) {
+        document.getElementById('calc-preview').textContent = '4桁で入力';
+        return;
+      }
+      const outMin = Math.floor(raw / 100) * 60 + (raw % 100);
+      const ot = Math.max(0, Math.floor((outMin - info.regMin) / 6) / 10);
+      const total = Math.max(0, Math.floor((outMin - info.startMin - 60) / 6) / 10);
+      document.getElementById('calc-preview').textContent = `実働 ${total.toFixed(1)}h / 残業 +${ot.toFixed(1)}h`;
+    }
+
+    function renderDashboard(data) {
+      const s = data.summary;
+      document.getElementById('kpi-work').textContent = `${s.workDays}日`;
+      document.getElementById('kpi-leave').textContent = `${s.paidLeave}/${s.halfLeave}`;
+      document.getElementById('kpi-ot').textContent = `${s.overtime.toFixed(1)}h`;
+      document.getElementById('kpi-total').textContent = `${s.totalHours.toFixed(1)}h`;
+
+      document.getElementById('workload-sum').textContent = `計 ${s.totalHours.toFixed(1)}h`;
+      document.getElementById('wl-morning').textContent = `${s.morning.toFixed(1)}h`;
+      document.getElementById('wl-yoko').textContent = `${s.yoko.toFixed(1)}h`;
+      document.getElementById('wl-kami').textContent = `${s.kami.toFixed(1)}h`;
+      document.getElementById('wl-kawa').textContent = `${s.kawa.toFixed(1)}h`;
+
+      const listEl = document.getElementById('daily-list');
+      if (!data.records || data.records.length === 0) {
+        listEl.innerHTML = `<div class="text-center text-xs text-slate-500 py-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">該当月のデータがありません</div>`;
+        return;
+      }
+
+      listEl.innerHTML = data.records.map(r => `
+        <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-slate-900 dark:text-slate-100">${r.date.slice(5)}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">${r.type}</span>
+              <span class="font-mono text-slate-500 dark:text-slate-400">${r.type === '有休' ? '休暇' : (r.shift + ' → ' + r.outTime)}</span>
+            </div>
+            <div class="text-slate-500 dark:text-slate-400 font-mono">
+              朝${Number(r.morning).toFixed(1)} / 横${Number(r.yoko).toFixed(1)} / 神${Number(r.kami).toFixed(1)} / 川${Number(r.kawa).toFixed(1)}
+              ${r.memo ? `<span class="ml-1 text-slate-700 dark:text-slate-300">・${r.memo}</span>` : ''}
+            </div>
+          </div>
+          <div class="text-right font-mono">
+            <div class="text-sm font-bold text-slate-900 dark:text-slate-100">${Number(r.total).toFixed(1)}h</div>
+            <div class="text-amber-500 dark:text-amber-400">残+${Number(r.ot).toFixed(1)}h</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadMonth() {
+      const cfg = getConfig();
+      if (!cfg.url || !cfg.secret) {
+        toggleSettings(true);
+        return;
+      }
+      const ym = document.getElementById('month-picker').value;
+      const listEl = document.getElementById('daily-list');
+      listEl.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">読み込み中...</div>`;
+      try {
+        const data = await callGasApi({ action: 'getDashboard', ym: ym });
+        renderDashboard(data);
+      } catch (e) {
+        listEl.innerHTML = `<div class="text-center text-xs text-red-500 py-4">✕ ${e.message}</div>`;
+      }
+    }
+
+    async function sendAttendance() {
+      const dateVal = document.getElementById('target-date').value;
+      const isLeave = currentShift === '有休';
+      const outVal = document.getElementById('end-input').value.trim();
+
+      if (!isLeave && !/^\d{3,4}$/.test(outVal)) {
+        const msgEl = document.getElementById('status-msg');
+        msgEl.textContent = '⚠ 退勤時刻を3〜4桁の数字で入力してください（例: 1730）';
+        msgEl.className = 'text-xs text-amber-500 dark:text-amber-400';
+        return;
+      }
+
+      const payload = {
+        date: dateVal,
+        type: isLeave ? '有休' : '出勤',
+        shift: isLeave ? '' : currentShift,
+        outTime: isLeave ? '' : outVal,
+        memo: ''
+      };
+
+      const msgEl = document.getElementById('status-msg');
+      msgEl.textContent = 'スプレッドシートへ記録中...';
+      msgEl.className = 'text-xs text-blue-600 dark:text-blue-400';
+
+      try {
+        const data = await callGasApi({ action: 'submit', payload: payload });
+        msgEl.textContent = `✓ ${dateVal} を記録・集計しました`;
+        msgEl.className = 'text-xs text-emerald-600 dark:text-emerald-400';
+        document.getElementById('month-picker').value = data.summary.ym;
+        renderDashboard(data);
+      } catch (e) {
+        msgEl.textContent = `✕ ${e.message}`;
+        msgEl.className = 'text-xs text-red-500';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initDates();
+      selectShift('8:45');
+      loadMonth();
+    });
+  </script>
+</body>
+</html>
