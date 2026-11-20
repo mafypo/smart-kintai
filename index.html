@@ -2,12 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="スマート勤怠" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
+  <meta id="meta-theme-color" name="theme-color" content="#ffffff" />
   <link rel="apple-touch-icon" href="./icon.png" />
   <link rel="icon" type="image/png" href="./icon.png" />
   <link rel="manifest" href="./manifest.json" />
@@ -43,227 +42,276 @@
       const isDark = saved ? saved === 'dark' : prefersDark;
       document.documentElement.classList.toggle('dark', isDark);
       document.documentElement.classList.toggle('light', !isDark);
+      const meta = document.getElementById('meta-theme-color');
+      if (meta) meta.setAttribute('content', isDark ? '#020617' : '#ffffff');
     })();
   </script>
 </head>
 <body class="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen pb-10 antialiased selection:bg-blue-600 selection:text-white transition-colors duration-200" style="padding-top: env(safe-area-inset-top);">
-  <div class="max-w-md mx-auto px-4 pt-3 space-y-4">
-    <!-- Header -->
-    <header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-      <div class="flex items-center gap-2.5">
-        <img src="./icon.png" alt="icon" class="w-9 h-9 rounded-xl shadow-md object-cover" />
-        <div>
-          <h1 class="text-base font-bold leading-tight">スマート勤怠＆工数</h1>
-          <p class="text-xs text-slate-500 dark:text-slate-400">1タップ打刻・工数トラッカー</p>
+  <div class="max-w-md mx-auto px-4 pt-3 space-y-3.5">
+    <!-- Header (2-row layout to avoid wrapping on 375px) -->
+    <header class="space-y-2.5 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <img src="./icon.png" alt="" class="w-9 h-9 rounded-xl shadow-md object-cover shrink-0" />
+          <div class="min-w-0">
+            <h1 class="text-base font-bold leading-tight whitespace-nowrap">スマート勤怠＆工数</h1>
+            <p class="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">1タップ打刻・工数トラッカー</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onclick="toggleTheme()"
+            id="btn-theme"
+            aria-label="ライトとダークテーマを切り替え"
+            class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            🌓
+          </button>
+          <button
+            type="button"
+            onclick="toggleSettings()"
+            id="btn-settings"
+            aria-label="接続設定を開く"
+            aria-expanded="false"
+            aria-controls="settings-panel"
+            class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            ⚙
+          </button>
         </div>
       </div>
-      <div class="flex items-center gap-1.5">
+
+      <div class="flex items-center justify-between gap-2">
+        <label for="month-picker" class="text-xs font-medium text-slate-600 dark:text-slate-400 shrink-0">表示月</label>
         <input
           id="month-picker"
           type="month"
+          aria-label="表示対象年月"
           onchange="loadMonth()"
-          class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-slate-800 dark:text-slate-200"
+          class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-mono text-slate-800 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         />
-        <button
-          type="button"
-          onclick="toggleTheme()"
-          title="ライト/ダーク切替"
-          class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs"
-        >
-          🌓
-        </button>
-        <button
-          type="button"
-          onclick="toggleSettings()"
-          title="接続設定"
-          class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs"
-        >
-          ⚙
-        </button>
       </div>
     </header>
 
-    <!-- Connection Settings Panel (Stored only in localStorage on this device) -->
+    <!-- Connection Settings Panel -->
     <section id="settings-panel" class="hidden bg-slate-50 dark:bg-slate-900 border border-blue-500/40 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
       <div class="flex items-center justify-between text-xs">
-        <span class="font-bold text-blue-600 dark:text-blue-400">🔐 接続設定（この端末にのみ保存）</span>
-        <button type="button" onclick="toggleSettings(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕ 閉じる</button>
+        <span class="font-bold text-blue-700 dark:text-blue-400">🔐 接続設定（この端末にのみ保存）</span>
+        <button type="button" onclick="toggleSettings(false)" class="px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">✕ 閉じる</button>
       </div>
       <div class="space-y-2 text-xs">
         <label class="block space-y-1">
-          <span class="text-slate-600 dark:text-slate-300">GAS ウェブアプリ URL</span>
+          <span class="text-slate-700 dark:text-slate-300 font-medium">GAS ウェブアプリ URL</span>
           <input
             id="cfg-url"
             type="url"
             placeholder="URLを入力"
-            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+            class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           />
         </label>
         <label class="block space-y-1">
-          <span class="text-slate-600 dark:text-slate-300">合言葉（パスコード）</span>
+          <span class="text-slate-700 dark:text-slate-300 font-medium">合言葉（パスコード）</span>
           <input
             id="cfg-secret"
             type="password"
             placeholder="合言葉を入力"
-            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+            class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           />
         </label>
         <div class="flex gap-2 pt-1">
           <button
             type="button"
             onclick="saveAndConnect()"
-            class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-xl text-xs transition"
+            id="btn-save-cfg"
+            class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             保存して接続テスト
           </button>
           <button
             type="button"
             onclick="clearConfig()"
-            class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-500 text-xs"
+            class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             リセット
           </button>
         </div>
-        <div id="cfg-msg" class="text-xs hidden"></div>
+        <div id="cfg-msg" role="status" aria-live="polite" class="text-xs hidden"></div>
       </div>
     </section>
 
     <!-- 1-Tap Quick Recorder -->
     <section class="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
-      <div class="flex items-center justify-between text-xs">
-        <span class="font-semibold text-blue-600 dark:text-blue-400">⚡ 1タップ打刻（上書き自動判定）</span>
+      <div class="flex items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">⚡ 1タップ打刻</span>
+          <span id="overwrite-badge" class="hidden px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold text-[11px] whitespace-nowrap">記録済・上書き</span>
+        </div>
         <input
           id="target-date"
           type="date"
-          class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-slate-800 dark:text-slate-200"
+          aria-label="打刻対象日"
+          onchange="onTargetDateChange()"
+          class="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-sm font-mono text-slate-800 dark:text-slate-200 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         />
       </div>
 
-      <!-- STEP 1: 開始シフト（固定・1タップ） -->
-      <div class="space-y-1.5">
+      <!-- STEP 0: 勤務区分（出勤 / 半休 / 休日出勤 / 有休） -->
+      <div class="grid grid-cols-4 gap-1.5 text-xs" role="group" aria-label="勤務区分">
+        <button type="button" onclick="selectWorkType('出勤')" id="wt-出勤" aria-pressed="true" class="py-2 rounded-lg border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">出勤</button>
+        <button type="button" onclick="selectWorkType('半休')" id="wt-半休" aria-pressed="false" class="py-2 rounded-lg border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">半休</button>
+        <button type="button" onclick="selectWorkType('休日出勤')" id="wt-休日出勤" aria-pressed="false" class="py-2 rounded-lg border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">休出</button>
+        <button type="button" onclick="selectWorkType('有休')" id="wt-有休" aria-pressed="false" class="py-2 rounded-lg border font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">有休</button>
+      </div>
+
+      <!-- STEP 1: 開始シフト（3列×2段） -->
+      <div id="shift-section" class="space-y-1.5">
         <div class="flex items-center justify-between text-xs">
           <span class="text-slate-700 dark:text-slate-300 font-medium">① 開始シフト</span>
-          <span id="selected-shift-info" class="font-mono text-slate-500 dark:text-slate-400">8:45〜定時 17:30</span>
+          <span id="selected-shift-info" class="font-mono text-slate-600 dark:text-slate-400">8:45〜定時 17:30</span>
         </div>
-        <div class="grid grid-cols-6 gap-1 text-xs font-mono">
-          <button type="button" onclick="selectShift('7:50')" id="sh-7:50" class="py-2 rounded-lg border transition flex flex-col items-center">
+        <div class="grid grid-cols-3 gap-1.5 text-xs font-mono" role="group" aria-label="開始シフト選択">
+          <button type="button" onclick="selectShift('7:50')" id="sh-7:50" aria-pressed="false" class="py-2 rounded-lg border transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <span class="font-bold">7:50</span>
-            <span class="text-[10px] opacity-75">朝当番</span>
+            <span class="text-[11px] opacity-80">朝当番</span>
           </button>
-          <button type="button" onclick="selectShift('8:45')" id="sh-8:45" class="py-2 rounded-lg border transition flex flex-col items-center">
+          <button type="button" onclick="selectShift('8:45')" id="sh-8:45" aria-pressed="true" class="py-2 rounded-lg border transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <span class="font-bold">8:45</span>
-            <span class="text-[10px] opacity-90">基本</span>
+            <span class="text-[11px] opacity-90">基本</span>
           </button>
-          <button type="button" onclick="selectShift('10:00')" id="sh-10:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+          <button type="button" onclick="selectShift('10:00')" id="sh-10:00" aria-pressed="false" class="py-2 rounded-lg border transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <span class="font-bold">10:00</span>
-            <span class="text-[10px] opacity-75">10時</span>
+            <span class="text-[11px] opacity-80">10時</span>
           </button>
-          <button type="button" onclick="selectShift('11:00')" id="sh-11:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+          <button type="button" onclick="selectShift('11:00')" id="sh-11:00" aria-pressed="false" class="py-2 rounded-lg border transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <span class="font-bold">11:00</span>
-            <span class="text-[10px] opacity-75">11時</span>
+            <span class="text-[11px] opacity-80">11時</span>
           </button>
-          <button type="button" onclick="selectShift('13:00')" id="sh-13:00" class="py-2 rounded-lg border transition flex flex-col items-center">
+          <button type="button" onclick="selectShift('13:00')" id="sh-13:00" aria-pressed="false" class="py-2 rounded-lg border transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             <span class="font-bold">13:00</span>
-            <span class="text-[10px] opacity-75">13時</span>
+            <span class="text-[11px] opacity-80">13時</span>
           </button>
-          <button type="button" onclick="selectShift('有休')" id="sh-有休" class="py-2 rounded-lg border transition flex flex-col items-center">
-            <span class="font-bold">有休</span>
-            <span class="text-[10px] opacity-75">休暇</span>
+          <button type="button" onclick="resetToTodayNew()" class="py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            <span class="font-bold">↺ 今日</span>
+            <span class="text-[11px] opacity-80">リセット</span>
           </button>
         </div>
       </div>
 
-      <!-- STEP 2: 退勤時刻（1タップ ＋ 手入力） -->
+      <!-- STEP 2: 退勤時刻（2列×2段 ＋ 手入力） -->
       <div id="end-time-section" class="space-y-1.5">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-slate-700 dark:text-slate-300 font-medium">② 退勤時刻（1タップ / 手入力）</span>
-          <span id="calc-preview" class="font-mono text-blue-600 dark:text-blue-400 font-semibold">実働 7.7h / 残業 +0.0h</span>
+        <div class="flex items-center justify-between gap-2 text-xs">
+          <span class="text-slate-700 dark:text-slate-300 font-medium shrink-0">② 退勤時刻</span>
+          <span id="calc-preview" aria-live="polite" class="font-mono text-blue-700 dark:text-blue-400 font-semibold whitespace-nowrap">実働 7.7h / 残業 +0.0h</span>
         </div>
-        <div class="grid grid-cols-4 gap-1.5 text-xs font-mono">
-          <button type="button" onclick="setEndPreset(0)" id="ep-0" class="py-1.5 px-1 rounded-lg border font-bold transition">
+        <div class="grid grid-cols-2 gap-1.5 text-xs font-mono" role="group" aria-label="退勤時刻プリセット">
+          <button type="button" onclick="setEndPreset(0)" id="ep-0" aria-pressed="true" class="py-2.5 px-2 rounded-lg border font-bold transition min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             定時 1730
           </button>
-          <button type="button" onclick="setEndPreset(30)" id="ep-30" class="py-1.5 px-1 rounded-lg border transition">
-            +30m 1800
+          <button type="button" onclick="setEndPreset(30)" id="ep-30" aria-pressed="false" class="py-2.5 px-2 rounded-lg border transition min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            +30m (1800)
           </button>
-          <button type="button" onclick="setEndPreset(60)" id="ep-60" class="py-1.5 px-1 rounded-lg border transition">
-            +1h 1830
+          <button type="button" onclick="setEndPreset(60)" id="ep-60" aria-pressed="false" class="py-2.5 px-2 rounded-lg border transition min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            +1h (1830)
           </button>
-          <button type="button" onclick="setNowTime()" id="ep-now" class="py-1.5 px-1 rounded-lg border transition">
+          <button type="button" onclick="setNowTime()" id="ep-now" aria-pressed="false" class="py-2.5 px-2 rounded-lg border transition min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
             ⌚ いま
           </button>
         </div>
       </div>
 
-      <!-- Submit Row -->
-      <div class="flex gap-2 pt-0.5">
-        <div class="relative flex-1">
+      <!-- End Time & Memo Inputs -->
+      <div class="space-y-2 pt-0.5">
+        <div class="flex gap-2">
           <input
             id="end-input"
             type="tel"
+            inputmode="numeric"
             maxlength="4"
             value="1730"
+            aria-label="退勤時刻（コロンなし4桁）"
             oninput="onManualEndInput()"
             placeholder="退勤4桁 (例: 1845)"
-            class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+            class="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-base font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           />
-          <span class="absolute right-3 top-3 text-[11px] text-slate-400 dark:text-slate-500 font-mono">手入力可</span>
+          <button
+            type="button"
+            onclick="sendAttendance()"
+            id="btn-send"
+            class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white active:scale-95 transition font-semibold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-blue-600/25 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            記録する
+          </button>
         </div>
-        <button
-          type="button"
-          onclick="sendAttendance()"
-          id="btn-send"
-          class="bg-blue-600 hover:bg-blue-500 text-white active:scale-95 transition font-semibold text-sm px-5 py-2.5 rounded-xl shadow-md shadow-blue-600/25 whitespace-nowrap"
-        >
-          記録する
-        </button>
+
+        <div class="flex gap-2 items-center">
+          <input
+            id="memo-input"
+            type="text"
+            maxlength="80"
+            aria-label="メモ（任意）"
+            placeholder="メモ（任意：休暇理由や備考）"
+            class="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          />
+          <button
+            type="button"
+            id="btn-delete"
+            onclick="deleteSelectedDate()"
+            aria-label="この日の記録を削除"
+            class="hidden px-3 py-2 rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 text-xs font-semibold whitespace-nowrap active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            🗑 削除
+          </button>
+        </div>
       </div>
 
-      <div id="status-msg" class="text-xs text-emerald-600 dark:text-emerald-400 hidden"></div>
+      <div id="status-msg" role="status" aria-live="polite" class="text-xs hidden"></div>
     </section>
 
     <!-- Monthly KPI Cards -->
     <section class="grid grid-cols-4 gap-2 text-center">
       <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
-        <div class="text-xs text-slate-500 dark:text-slate-400">出勤</div>
+        <div class="text-xs text-slate-600 dark:text-slate-400">出勤</div>
         <div id="kpi-work" class="text-base font-bold font-mono mt-0.5">-</div>
+        <div id="kpi-holiday-sub" class="text-[11px] font-mono text-purple-700 dark:text-purple-400 hidden"></div>
       </div>
       <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
-        <div class="text-xs text-slate-500 dark:text-slate-400">有休/半休</div>
+        <div class="text-xs text-slate-600 dark:text-slate-400">有休/半休</div>
         <div id="kpi-leave" class="text-base font-bold font-mono mt-0.5">-</div>
       </div>
       <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
-        <div class="text-xs text-slate-500 dark:text-slate-400">時間外</div>
-        <div id="kpi-ot" class="text-base font-bold font-mono text-amber-500 dark:text-amber-400 mt-0.5">-</div>
+        <div class="text-xs text-slate-600 dark:text-slate-400">時間外</div>
+        <div id="kpi-ot" class="text-base font-bold font-mono text-amber-700 dark:text-amber-400 mt-0.5">-</div>
       </div>
       <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
-        <div class="text-xs text-slate-500 dark:text-slate-400">合計時間</div>
-        <div id="kpi-total" class="text-base font-bold font-mono text-blue-600 dark:text-blue-400 mt-0.5">-</div>
+        <div class="text-xs text-slate-600 dark:text-slate-400">合計時間</div>
+        <div id="kpi-total" class="text-base font-bold font-mono text-blue-700 dark:text-blue-400 mt-0.5">-</div>
       </div>
     </section>
 
     <!-- Workload Breakdown -->
     <section class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-      <div class="flex items-center justify-between text-xs">
-        <span class="font-semibold text-slate-700 dark:text-slate-200">📊 工数内訳（朝当番 / 横60% / 神20% / 川20%）</span>
-        <span id="workload-sum" class="font-mono text-slate-500 dark:text-slate-400">0.0h</span>
+      <div class="flex items-center justify-between gap-2 text-xs">
+        <span class="font-semibold text-slate-700 dark:text-slate-200">📊 工数内訳</span>
+        <span id="workload-sum" class="font-mono text-slate-600 dark:text-slate-400">0.0h</span>
       </div>
-      <div class="grid grid-cols-4 gap-2 text-xs">
+      <div class="grid grid-cols-4 gap-1.5 text-xs">
         <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
-          <div class="text-slate-500 dark:text-slate-400">朝当番</div>
-          <div id="wl-morning" class="font-mono font-bold text-sm text-purple-600 dark:text-purple-400 mt-0.5">0.0h</div>
+          <div class="text-slate-600 dark:text-slate-400">朝当番</div>
+          <div id="wl-morning" class="font-mono font-bold text-sm text-purple-700 dark:text-purple-400 mt-0.5">0.0h</div>
         </div>
         <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
-          <div class="text-slate-500 dark:text-slate-400">横 (残差)</div>
-          <div id="wl-yoko" class="font-mono font-bold text-sm text-blue-600 dark:text-blue-400 mt-0.5">0.0h</div>
+          <div class="text-slate-600 dark:text-slate-400">横(60%)</div>
+          <div id="wl-yoko" class="font-mono font-bold text-sm text-blue-700 dark:text-blue-400 mt-0.5">0.0h</div>
         </div>
         <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
-          <div class="text-slate-500 dark:text-slate-400">神 (20%)</div>
-          <div id="wl-kami" class="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">0.0h</div>
+          <div class="text-slate-600 dark:text-slate-400">神(20%)</div>
+          <div id="wl-kami" class="font-mono font-bold text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">0.0h</div>
         </div>
         <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
-          <div class="text-slate-500 dark:text-slate-400">川 (20%)</div>
-          <div id="wl-kawa" class="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400 mt-0.5">0.0h</div>
+          <div class="text-slate-600 dark:text-slate-400">川(20%)</div>
+          <div id="wl-kawa" class="font-mono font-bold text-sm text-cyan-700 dark:text-cyan-400 mt-0.5">0.0h</div>
         </div>
       </div>
     </section>
@@ -272,19 +320,25 @@
     <section class="space-y-2">
       <div class="flex items-center justify-between px-1">
         <div class="flex items-center gap-2">
-          <h2 class="text-xs font-semibold text-slate-500 dark:text-slate-400">日次記録リスト</h2>
-          <span id="sort-badge" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">古い順</span>
+          <h2 class="text-xs font-semibold text-slate-600 dark:text-slate-400">日次記録リスト</h2>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400">（タップで編集）</span>
         </div>
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <button
             type="button"
             id="btn-sort"
             onclick="toggleSortOrder()"
-            class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 active:scale-95 transition"
+            class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            ↑ 昇順
+            ↕ 古い順
           </button>
-          <button type="button" onclick="loadMonth()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">再読込 ↻</button>
+          <button
+            type="button"
+            onclick="loadMonth()"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            再読込 ↻
+          </button>
         </div>
       </div>
       <div id="daily-list" class="space-y-2"></div>
@@ -300,12 +354,21 @@
       '13:00': { startMin: 780, regMin: 1305, regStr: '2145', regDisp: '21:45' }
     };
 
-    const ACTIVE_BTN_CLS = 'py-2 rounded-lg border border-blue-600 bg-blue-600 text-white transition flex flex-col items-center shadow-sm';
-    const INACTIVE_BTN_CLS = 'py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition flex flex-col items-center';
-    const ACTIVE_PRESET_CLS = 'py-1.5 px-1 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold transition shadow-sm';
-    const INACTIVE_PRESET_CLS = 'py-1.5 px-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition';
+    const ACTIVE_TYPE_CLS = 'py-2 rounded-lg border border-blue-600 bg-blue-600 text-white font-semibold transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+    const INACTIVE_TYPE_CLS = 'py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
 
+    const ACTIVE_BTN_CLS = 'py-2 rounded-lg border border-blue-600 bg-blue-600 text-white transition flex flex-col items-center justify-center min-h-[46px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+    const INACTIVE_BTN_CLS = 'py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition flex flex-col items-center justify-center min-h-[46px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+
+    const ACTIVE_PRESET_CLS = 'py-2.5 px-2 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold transition min-h-[44px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+    const INACTIVE_PRESET_CLS = 'py-2.5 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 transition min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+
+    let currentWorkType = '出勤';
     let currentShift = '8:45';
+    let sortOrder = 'asc';
+    let cachedRecords = [];
+    let isSubmitting = false;
+    let lastKnownTodayStr = '';
 
     if (window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
@@ -319,6 +382,8 @@
       const isDark = mode === 'dark';
       document.documentElement.classList.toggle('dark', isDark);
       document.documentElement.classList.toggle('light', !isDark);
+      const meta = document.getElementById('meta-theme-color');
+      if (meta) meta.setAttribute('content', isDark ? '#020617' : '#ffffff');
     }
 
     function toggleTheme() {
@@ -327,6 +392,37 @@
       localStorage.setItem('kintai-theme', next);
       applyTheme(next);
     }
+
+    function getTodayISO() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function initDates() {
+      const today = getTodayISO();
+      lastKnownTodayStr = today;
+      document.getElementById('month-picker').value = today.slice(0, 7);
+      document.getElementById('target-date').value = today;
+    }
+
+    // 日付跨ぎ自動更新（開きっぱなし翌日事故を防止）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      const nowToday = getTodayISO();
+      if (lastKnownTodayStr && nowToday !== lastKnownTodayStr) {
+        const targetEl = document.getElementById('target-date');
+        if (targetEl.value === lastKnownTodayStr) {
+          targetEl.value = nowToday;
+          document.getElementById('month-picker').value = nowToday.slice(0, 7);
+          clearStatusMsg();
+          loadMonth();
+        }
+        lastKnownTodayStr = nowToday;
+      }
+    });
 
     function getConfig() {
       return {
@@ -337,8 +433,10 @@
 
     function toggleSettings(forceState) {
       const panel = document.getElementById('settings-panel');
+      const btn = document.getElementById('btn-settings');
       const show = typeof forceState === 'boolean' ? forceState : panel.classList.contains('hidden');
       panel.classList.toggle('hidden', !show);
+      btn.setAttribute('aria-expanded', String(show));
       if (show) {
         const cfg = getConfig();
         document.getElementById('cfg-url').value = cfg.url;
@@ -346,8 +444,11 @@
       }
     }
 
-    async function callGasApi(body) {
-      const cfg = getConfig();
+    async function callGasApi(body, overrideCfg) {
+      if (navigator.onLine === false) {
+        throw new Error('オフラインです。ネットワーク接続を確認してください');
+      }
+      const cfg = overrideCfg || getConfig();
       const url = (cfg.url || '').trim();
       const secret = (cfg.secret || '').trim();
       if (!url || !secret) {
@@ -357,18 +458,26 @@
       const payloadStr = JSON.stringify({ ...body, secret: secret });
       let text = '';
       try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
         const res = await fetch(url, {
           method: 'POST',
-          body: payloadStr
+          body: payloadStr,
+          signal: controller.signal
         });
+        clearTimeout(timer);
         text = await res.text();
       } catch (fetchErr) {
-        // iOS Safariのfetchリダイレクト制限対策としてXHRで再試行
+        if (fetchErr && fetchErr.name === 'AbortError') {
+          throw new Error('通信がタイムアウトしました（15秒）。再試行してください');
+        }
         text = await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('POST', url, true);
+          xhr.timeout = 15000;
           xhr.onload = () => resolve(xhr.responseText);
-          xhr.onerror = () => reject(new Error('通信に失敗しました (Safari制限またはURL不正)'));
+          xhr.ontimeout = () => reject(new Error('通信がタイムアウトしました（15秒）'));
+          xhr.onerror = () => reject(new Error('通信に失敗しました (URLまたは接続設定を確認してください)'));
           xhr.send(payloadStr);
         });
       }
@@ -388,44 +497,41 @@
       const url = document.getElementById('cfg-url').value.trim();
       const secret = document.getElementById('cfg-secret').value.trim();
       const msgEl = document.getElementById('cfg-msg');
+      const saveBtn = document.getElementById('btn-save-cfg');
       if (!url || !secret) {
         msgEl.textContent = '⚠ URLと合言葉の両方を入力してください';
-        msgEl.className = 'text-xs text-amber-500';
+        msgEl.className = 'text-xs text-amber-700 dark:text-amber-400';
         return;
       }
-      localStorage.setItem('kintai_gas_url', url);
-      localStorage.setItem('kintai_api_secret', secret);
+      saveBtn.disabled = true;
       msgEl.textContent = '接続テスト中...';
-      msgEl.className = 'text-xs text-blue-500';
+      msgEl.className = 'text-xs text-blue-700 dark:text-blue-400';
       try {
         const ym = document.getElementById('month-picker').value;
-        const data = await callGasApi({ action: 'getDashboard', ym: ym });
+        const data = await callGasApi({ action: 'getDashboard', ym: ym }, { url, secret });
+        // 接続成功後にのみ保存（失敗時に既存の正常設定を消さない）
+        localStorage.setItem('kintai_gas_url', url);
+        localStorage.setItem('kintai_api_secret', secret);
         renderDashboard(data);
         msgEl.textContent = '✓ 接続成功！この端末に保存しました';
-        msgEl.className = 'text-xs text-emerald-500';
-        setTimeout(() => toggleSettings(false), 1000);
+        msgEl.className = 'text-xs text-emerald-700 dark:text-emerald-400';
+        setTimeout(() => toggleSettings(false), 900);
       } catch (e) {
         msgEl.textContent = '✕ ' + e.message;
-        msgEl.className = 'text-xs text-red-500';
+        msgEl.className = 'text-xs text-red-700 dark:text-red-400';
+      } finally {
+        saveBtn.disabled = false;
       }
     }
 
     function clearConfig() {
+      if (!confirm('この端末に保存された接続設定をリセットしますか？')) return;
       localStorage.removeItem('kintai_gas_url');
       localStorage.removeItem('kintai_api_secret');
       document.getElementById('cfg-url').value = '';
       document.getElementById('cfg-secret').value = '';
       document.getElementById('cfg-msg').textContent = 'リセットしました';
-      document.getElementById('cfg-msg').className = 'text-xs text-slate-400';
-    }
-
-    function initDates() {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      document.getElementById('month-picker').value = `${yyyy}-${mm}`;
-      document.getElementById('target-date').value = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('cfg-msg').className = 'text-xs text-slate-600 dark:text-slate-400';
     }
 
     function minToHHMM(m) {
@@ -434,33 +540,85 @@
       return String(hh).padStart(2, '0') + String(mm).padStart(2, '0');
     }
 
-    function selectShift(sh) {
-      currentShift = sh;
-      ['7:50', '8:45', '10:00', '11:00', '13:00', '有休'].forEach(k => {
-        const btn = document.getElementById('sh-' + k);
-        btn.className = (k === sh) ? ACTIVE_BTN_CLS : INACTIVE_BTN_CLS;
+    function parseOutTimeMinutes(val) {
+      const s = String(val || '').trim();
+      if (!/^\d{3,4}$/.test(s)) return null;
+      const num = Number(s);
+      const hh = Math.floor(num / 100);
+      const mm = num % 100;
+      if (hh < 5 || hh > 29 || mm < 0 || mm > 59) return null;
+      return hh * 60 + mm;
+    }
+
+    function clearStatusMsg() {
+      const msgEl = document.getElementById('status-msg');
+      msgEl.textContent = '';
+      msgEl.className = 'text-xs hidden';
+    }
+
+    function selectWorkType(wt) {
+      currentWorkType = wt;
+      clearStatusMsg();
+      ['出勤', '半休', '休日出勤', '有休'].forEach(k => {
+        const btn = document.getElementById('wt-' + k);
+        const active = k === wt;
+        btn.className = active ? ACTIVE_TYPE_CLS : INACTIVE_TYPE_CLS;
+        btn.setAttribute('aria-pressed', String(active));
       });
+
+      const shiftSection = document.getElementById('shift-section');
       const endSection = document.getElementById('end-time-section');
       const endInput = document.getElementById('end-input');
-      if (sh === '有休') {
-        document.getElementById('selected-shift-info').textContent = '有給休暇（時刻不要）';
+
+      if (wt === '有休') {
+        shiftSection.classList.add('opacity-40', 'pointer-events-none');
         endSection.classList.add('opacity-40', 'pointer-events-none');
         endInput.value = '';
         endInput.disabled = true;
-        return;
+        document.getElementById('calc-preview').textContent = '有休（0.0h）';
+      } else {
+        shiftSection.classList.remove('opacity-40', 'pointer-events-none');
+        endSection.classList.remove('opacity-40', 'pointer-events-none');
+        endInput.disabled = false;
+        if (!endInput.value) {
+          setEndPreset(0);
+        } else {
+          updateCalc();
+        }
       }
-      endSection.classList.remove('opacity-40', 'pointer-events-none');
-      endInput.disabled = false;
+    }
+
+    function selectShift(sh, keepEndValue) {
+      currentShift = sh;
+      clearStatusMsg();
+      ['7:50', '8:45', '10:00', '11:00', '13:00'].forEach(k => {
+        const btn = document.getElementById('sh-' + k);
+        const active = k === sh;
+        btn.className = active ? ACTIVE_BTN_CLS : INACTIVE_BTN_CLS;
+        btn.setAttribute('aria-pressed', String(active));
+      });
+
+      if (currentWorkType === '有休') {
+        selectWorkType('出勤');
+      }
+
       const info = SHIFTS[sh];
       document.getElementById('selected-shift-info').textContent = `${sh}〜定時 ${info.regDisp}（休憩1h込）`;
       document.getElementById('ep-0').textContent = `定時 ${info.regStr}`;
-      document.getElementById('ep-30').textContent = `+30m ${minToHHMM(info.regMin + 30)}`;
-      document.getElementById('ep-60').textContent = `+1h ${minToHHMM(info.regMin + 60)}`;
-      setEndPreset(0);
+      document.getElementById('ep-30').textContent = `+30m (${minToHHMM(info.regMin + 30)})`;
+      document.getElementById('ep-60').textContent = `+1h (${minToHHMM(info.regMin + 60)})`;
+
+      if (!keepEndValue) {
+        setEndPreset(0);
+      } else {
+        highlightPreset(null);
+        updateCalc();
+      }
     }
 
     function setEndPreset(addMin) {
-      if (currentShift === '有休') return;
+      if (currentWorkType === '有休') return;
+      clearStatusMsg();
       const info = SHIFTS[currentShift];
       document.getElementById('end-input').value = minToHHMM(info.regMin + addMin);
       highlightPreset(addMin);
@@ -468,9 +626,14 @@
     }
 
     function setNowTime() {
-      if (currentShift === '有休') return;
+      if (currentWorkType === '有休') return;
+      clearStatusMsg();
       const now = new Date();
-      const str = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+      let hh = now.getHours();
+      const mm = now.getMinutes();
+      // 深夜0:00〜4:59は前日残業として2400〜2859表記に自動補正
+      if (hh < 5) hh += 24;
+      const str = String(hh).padStart(2, '0') + String(mm).padStart(2, '0');
       document.getElementById('end-input').value = str;
       highlightPreset('now');
       updateCalc();
@@ -479,49 +642,115 @@
     function highlightPreset(active) {
       [0, 30, 60, 'now'].forEach(k => {
         const btn = document.getElementById('ep-' + k);
-        btn.className = (k === active) ? ACTIVE_PRESET_CLS : INACTIVE_PRESET_CLS;
+        const isOn = k === active;
+        btn.className = isOn ? ACTIVE_PRESET_CLS : INACTIVE_PRESET_CLS;
+        btn.setAttribute('aria-pressed', String(isOn));
       });
     }
 
     function onManualEndInput() {
+      clearStatusMsg();
       highlightPreset(null);
       updateCalc();
     }
 
     function updateCalc() {
-      if (currentShift === '有休') return;
-      const raw = parseInt(document.getElementById('end-input').value, 10);
-      const info = SHIFTS[currentShift];
-      if (isNaN(raw) || raw < 700 || raw > 2900) {
-        document.getElementById('calc-preview').textContent = '4桁で入力';
+      if (currentWorkType === '有休') {
+        document.getElementById('calc-preview').textContent = '有休（0.0h）';
         return;
       }
-      const outMin = Math.floor(raw / 100) * 60 + (raw % 100);
+      const outMin = parseOutTimeMinutes(document.getElementById('end-input').value);
+      const info = SHIFTS[currentShift];
+      if (outMin === null) {
+        document.getElementById('calc-preview').textContent = '正しい4桁時刻を入力';
+        return;
+      }
       const ot = Math.max(0, Math.floor((outMin - info.regMin) / 6) / 10);
       const total = Math.max(0, Math.floor((outMin - info.startMin - 60) / 6) / 10);
       document.getElementById('calc-preview').textContent = `実働 ${total.toFixed(1)}h / 残業 +${ot.toFixed(1)}h`;
     }
 
-    let sortOrder = 'asc';
-    let cachedRecords = [];
+    function syncExistingForTargetDate() {
+      const dateVal = document.getElementById('target-date').value; // YYYY-MM-DD
+      const slashDate = dateVal.replace(/\-/g, '/');
+      const existing = cachedRecords.find(r => r.date === slashDate);
+
+      const badge = document.getElementById('overwrite-badge');
+      const delBtn = document.getElementById('btn-delete');
+      const sendBtn = document.getElementById('btn-send');
+
+      if (existing) {
+        badge.classList.remove('hidden');
+        delBtn.classList.remove('hidden');
+        sendBtn.textContent = '上書き記録';
+        loadRecordToForm(existing, false);
+      } else {
+        badge.classList.add('hidden');
+        delBtn.classList.add('hidden');
+        sendBtn.textContent = '記録する';
+      }
+    }
+
+    function onTargetDateChange() {
+      clearStatusMsg();
+      const dateVal = document.getElementById('target-date').value;
+      const slashDate = dateVal.replace(/\-/g, '/');
+      const existing = cachedRecords.find(r => r.date === slashDate);
+      if (existing) {
+        syncExistingForTargetDate();
+      } else {
+        document.getElementById('overwrite-badge').classList.add('hidden');
+        document.getElementById('btn-delete').classList.add('hidden');
+        document.getElementById('btn-send').textContent = '記録する';
+        document.getElementById('memo-input').value = '';
+      }
+    }
+
+    function resetToTodayNew() {
+      clearStatusMsg();
+      const today = getTodayISO();
+      document.getElementById('target-date').value = today;
+      document.getElementById('memo-input').value = '';
+      selectWorkType('出勤');
+      selectShift('8:45', false);
+      onTargetDateChange();
+    }
+
+    function loadRecordToForm(rec, shouldScroll) {
+      document.getElementById('target-date').value = rec.date.replace(/\//g, '-');
+      document.getElementById('memo-input').value = rec.memo || '';
+      const wt = ['出勤', '半休', '休日出勤', '有休'].includes(rec.type) ? rec.type : '出勤';
+      selectWorkType(wt);
+      if (wt !== '有休') {
+        const sh = SHIFTS[rec.shift] ? rec.shift : '8:45';
+        selectShift(sh, true);
+        document.getElementById('end-input').value = rec.outTime || SHIFTS[sh].regStr;
+        updateCalc();
+      }
+      document.getElementById('overwrite-badge').classList.remove('hidden');
+      document.getElementById('btn-delete').classList.remove('hidden');
+      document.getElementById('btn-send').textContent = '上書き記録';
+      if (shouldScroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
 
     function toggleSortOrder() {
       sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-      const btn = document.getElementById('btn-sort');
-      const badge = document.getElementById('sort-badge');
-      if (sortOrder === 'asc') {
-        btn.textContent = '↑ 昇順';
-        badge.textContent = '古い順';
-      } else {
-        btn.textContent = '↓ 降順';
-        badge.textContent = '新しい順';
-      }
+      document.getElementById('btn-sort').textContent = sortOrder === 'asc' ? '↕ 古い順' : '↕ 新しい順';
       renderDailyList();
     }
 
     function renderDashboard(data) {
       const s = data.summary;
       document.getElementById('kpi-work').textContent = `${s.workDays}日`;
+      const holEl = document.getElementById('kpi-holiday-sub');
+      if (s.holidayWork > 0) {
+        holEl.textContent = `+休出${s.holidayWork}`;
+        holEl.classList.remove('hidden');
+      } else {
+        holEl.classList.add('hidden');
+      }
       document.getElementById('kpi-leave').textContent = `${s.paidLeave}/${s.halfLeave}`;
       document.getElementById('kpi-ot').textContent = `${s.overtime.toFixed(1)}h`;
       document.getElementById('kpi-total').textContent = `${s.totalHours.toFixed(1)}h`;
@@ -534,12 +763,19 @@
 
       cachedRecords = Array.isArray(data.records) ? [...data.records] : [];
       renderDailyList();
+      syncExistingForTargetDate();
     }
 
+    // XSS対策：DOM API（textContent）で安全に描画
     function renderDailyList() {
       const listEl = document.getElementById('daily-list');
+      listEl.textContent = '';
+
       if (!cachedRecords || cachedRecords.length === 0) {
-        listEl.innerHTML = `<div class="text-center text-xs text-slate-500 py-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">該当月のデータがありません</div>`;
+        const empty = document.createElement('div');
+        empty.className = 'text-center text-xs text-slate-500 dark:text-slate-400 py-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800';
+        empty.textContent = '該当月のデータがありません';
+        listEl.appendChild(empty);
         return;
       }
 
@@ -549,25 +785,54 @@
           : (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
       );
 
-      listEl.innerHTML = sorted.map(r => `
-        <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs">
-          <div class="space-y-0.5">
-            <div class="flex items-center gap-2">
-              <span class="font-mono font-bold text-slate-900 dark:text-slate-100">${r.date.slice(5)}</span>
-              <span class="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">${r.type}</span>
-              <span class="font-mono text-slate-500 dark:text-slate-400">${r.type === '有休' ? '休暇' : (r.shift + ' → ' + r.outTime)}</span>
-            </div>
-            <div class="text-slate-500 dark:text-slate-400 font-mono">
-              朝${Number(r.morning).toFixed(1)} / 横${Number(r.yoko).toFixed(1)} / 神${Number(r.kami).toFixed(1)} / 川${Number(r.kawa).toFixed(1)}
-              ${r.memo ? `<span class="ml-1 text-slate-700 dark:text-slate-300">・${r.memo}</span>` : ''}
-            </div>
-          </div>
-          <div class="text-right font-mono">
-            <div class="text-sm font-bold text-slate-900 dark:text-slate-100">${Number(r.total).toFixed(1)}h</div>
-            <div class="text-amber-500 dark:text-amber-400">残+${Number(r.ot).toFixed(1)}h</div>
-          </div>
-        </div>
-      `).join('');
+      sorted.forEach(r => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'w-full text-left bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl px-3 py-2.5 flex items-center justify-between text-xs transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500';
+        card.onclick = () => loadRecordToForm(r, true);
+
+        const left = document.createElement('div');
+        left.className = 'space-y-0.5 min-w-0 pr-2';
+
+        const topRow = document.createElement('div');
+        topRow.className = 'flex items-center gap-2 flex-wrap';
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'font-mono font-bold text-slate-900 dark:text-slate-100';
+        dateSpan.textContent = r.date.length >= 5 ? r.date.slice(5) : r.date;
+
+        const typeSpan = document.createElement('span');
+        typeSpan.className = 'px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium';
+        typeSpan.textContent = r.type;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'font-mono text-slate-600 dark:text-slate-400';
+        timeSpan.textContent = r.type === '有休' ? '休暇' : `${r.shift} → ${r.outTime}`;
+
+        topRow.append(dateSpan, typeSpan, timeSpan);
+
+        const bottomRow = document.createElement('div');
+        bottomRow.className = 'text-slate-600 dark:text-slate-400 font-mono truncate';
+        const wlText = `朝${Number(r.morning).toFixed(1)} / 横${Number(r.yoko).toFixed(1)} / 神${Number(r.kami).toFixed(1)} / 川${Number(r.kawa).toFixed(1)}`;
+        bottomRow.textContent = r.memo ? `${wlText} ・${r.memo}` : wlText;
+
+        left.append(topRow, bottomRow);
+
+        const right = document.createElement('div');
+        right.className = 'text-right font-mono shrink-0';
+
+        const totalDiv = document.createElement('div');
+        totalDiv.className = 'text-sm font-bold text-slate-900 dark:text-slate-100';
+        totalDiv.textContent = `${Number(r.total).toFixed(1)}h`;
+
+        const otDiv = document.createElement('div');
+        otDiv.className = 'text-amber-700 dark:text-amber-400';
+        otDiv.textContent = `残+${Number(r.ot).toFixed(1)}h`;
+
+        right.append(totalDiv, otDiv);
+        card.append(left, right);
+        listEl.appendChild(card);
+      });
     }
 
     async function loadMonth() {
@@ -578,54 +843,121 @@
       }
       const ym = document.getElementById('month-picker').value;
       const listEl = document.getElementById('daily-list');
-      listEl.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">読み込み中...</div>`;
+      listEl.textContent = '';
+      const loading = document.createElement('div');
+      loading.className = 'text-center text-xs text-slate-500 dark:text-slate-400 py-4';
+      loading.textContent = '読み込み中...';
+      listEl.appendChild(loading);
+
       try {
         const data = await callGasApi({ action: 'getDashboard', ym: ym });
         renderDashboard(data);
       } catch (e) {
-        listEl.innerHTML = `<div class="text-center text-xs text-red-500 py-4">✕ ${e.message}</div>`;
+        listEl.textContent = '';
+        const errBox = document.createElement('div');
+        errBox.className = 'text-center text-xs text-red-700 dark:text-red-400 py-4 space-y-2';
+        const errMsg = document.createElement('div');
+        errMsg.textContent = `✕ ${e.message}`;
+        errBox.appendChild(errMsg);
+
+        if (String(e.message).includes('合言葉') || String(e.message).includes('URL')) {
+          const openBtn = document.createElement('button');
+          openBtn.type = 'button';
+          openBtn.className = 'px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium';
+          openBtn.textContent = '⚙ 接続設定を開く';
+          openBtn.onclick = () => toggleSettings(true);
+          errBox.appendChild(openBtn);
+        }
+        listEl.appendChild(errBox);
       }
     }
 
     async function sendAttendance() {
+      if (isSubmitting) return;
       const dateVal = document.getElementById('target-date').value;
-      const isLeave = currentShift === '有休';
+      const msgEl = document.getElementById('status-msg');
+      if (!dateVal) {
+        msgEl.textContent = '⚠ 日付を選択してください';
+        msgEl.className = 'text-xs text-amber-700 dark:text-amber-400';
+        return;
+      }
+
+      const isLeave = currentWorkType === '有休';
       const outVal = document.getElementById('end-input').value.trim();
 
-      if (!isLeave && !/^\d{3,4}$/.test(outVal)) {
-        const msgEl = document.getElementById('status-msg');
-        msgEl.textContent = '⚠ 退勤時刻を3〜4桁の数字で入力してください（例: 1730）';
-        msgEl.className = 'text-xs text-amber-500 dark:text-amber-400';
+      if (!isLeave && parseOutTimeMinutes(outVal) === null) {
+        msgEl.textContent = '⚠ 退勤時刻は正しい4桁で入力してください（時:05〜29、分:00〜59）';
+        msgEl.className = 'text-xs text-amber-700 dark:text-amber-400';
         return;
       }
 
       const payload = {
         date: dateVal,
-        type: isLeave ? '有休' : '出勤',
+        type: currentWorkType,
         shift: isLeave ? '' : currentShift,
         outTime: isLeave ? '' : outVal,
-        memo: ''
+        memo: document.getElementById('memo-input').value.trim()
       };
 
-      const msgEl = document.getElementById('status-msg');
+      const sendBtn = document.getElementById('btn-send');
+      const prevBtnText = sendBtn.textContent;
+      isSubmitting = true;
+      sendBtn.disabled = true;
+      sendBtn.textContent = '送信中...';
       msgEl.textContent = 'スプレッドシートへ記録中...';
-      msgEl.className = 'text-xs text-blue-600 dark:text-blue-400';
+      msgEl.className = 'text-xs text-blue-700 dark:text-blue-400';
 
       try {
         const data = await callGasApi({ action: 'submit', payload: payload });
         msgEl.textContent = `✓ ${dateVal} を記録・集計しました`;
-        msgEl.className = 'text-xs text-emerald-600 dark:text-emerald-400';
+        msgEl.className = 'text-xs text-emerald-700 dark:text-emerald-400 font-medium';
         document.getElementById('month-picker').value = data.summary.ym;
         renderDashboard(data);
       } catch (e) {
         msgEl.textContent = `✕ ${e.message}`;
-        msgEl.className = 'text-xs text-red-500';
+        msgEl.className = 'text-xs text-red-700 dark:text-red-400';
+      } finally {
+        isSubmitting = false;
+        sendBtn.disabled = false;
+        if (sendBtn.textContent === '送信中...') {
+          sendBtn.textContent = prevBtnText;
+        }
+      }
+    }
+
+    async function deleteSelectedDate() {
+      if (isSubmitting) return;
+      const dateVal = document.getElementById('target-date').value;
+      if (!dateVal) return;
+      if (!confirm(`${dateVal} の勤怠記録を削除しますか？\n（スプレッドシートの該当行が削除されます）`)) return;
+
+      const msgEl = document.getElementById('status-msg');
+      const delBtn = document.getElementById('btn-delete');
+      isSubmitting = true;
+      delBtn.disabled = true;
+      msgEl.textContent = '削除中...';
+      msgEl.className = 'text-xs text-blue-700 dark:text-blue-400';
+
+      try {
+        const ym = document.getElementById('month-picker').value;
+        const data = await callGasApi({ action: 'delete', date: dateVal, ym: ym });
+        msgEl.textContent = `✓ ${dateVal} の記録を削除しました`;
+        msgEl.className = 'text-xs text-emerald-700 dark:text-emerald-400 font-medium';
+        document.getElementById('memo-input').value = '';
+        renderDashboard(data);
+      } catch (e) {
+        msgEl.textContent = `✕ ${e.message}`;
+        msgEl.className = 'text-xs text-red-700 dark:text-red-400';
+      } finally {
+        isSubmitting = false;
+        delBtn.disabled = false;
       }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
       initDates();
-      selectShift('8:45');
+      selectWorkType('出勤');
+      selectShift('8:45', false);
       loadMonth();
     });
   </script>
